@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         php-version: ['8.1', '8.2', '8.3']
 
@@ -30,10 +31,10 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      - name: Validate composer.json
+      - name: Validate Composer
         run: composer validate --strict
 
-      - name: Cache Composer dependencies
+      - name: Cache Composer packages
         uses: actions/cache@v4
         with:
           path: vendor
@@ -41,7 +42,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-php-${{ matrix.php-version }}-
 
-      - name: Install Composer dependencies
+      - name: Install dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
       - name: Run tests
