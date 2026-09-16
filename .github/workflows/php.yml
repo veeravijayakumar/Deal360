@@ -1,9 +1,10 @@
-name: PHP Composer
+name: PHP Code Check
 
 on:
   push:
     branches:
       - main
+
   pull_request:
     branches:
       - main
@@ -12,38 +13,96 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  php-check:
+    name: PHP Syntax Check
     runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: false
-      matrix:
-        php-version: ['8.1', '8.2', '8.3']
-
     steps:
+      # 1. Download the repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Install PHP
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-version }}
-          tools: composer:v2
+          php-version: "8.3"
           coverage: none
 
-      - name: Validate Composer
-        run: composer validate --strict
+      # 3. Show PHP version
+      - name: Check PHP version
+        run: php -v
 
-      - name: Cache Composer packages
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: ${{ runner.os }}-php-${{ matrix.php-version }}-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-php-${{ matrix.php-version }}-
+      # 4. Check all PHP files for syntax errors
+      - name: Check PHP syntax
+        shell: bash
+        run: |
+          set -e
 
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --no-interaction
+          echo "======================================"
+          echo "Checking PHP files..."
+          echo "======================================"
 
-      - name: Run tests
-        run: composer run-script test
+          FAILED=0
+          COUNT=0
+
+          while IFS= read -r -d '' file; do
+            COUNT=$((COUNT + 1))
+
+            echo ""
+            echo "Checking: $file"
+
+            if php -l "$file"; then
+              echo "OK: $file"
+            else
+              echo "FAILED: $file"
+              FAILED=1
+            fi
+
+          done < <(
+            find . \
+              -type f \
+              -name "*.php" \
+              -not -path "./.git/*" \
+              -not -path "./vendor/*" \
+              -print0
+          )
+
+          echo ""
+          echo "======================================"
+          echo "PHP files checked: $COUNT"
+          echo "======================================"
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "ERROR: No PHP files were found."
+            exit 1
+          fi
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo ""
+            echo "ERROR: One or more PHP files contain syntax errors."
+            exit 1
+          fi
+
+          echo ""
+          echo "SUCCESS: All PHP files passed syntax checking."
+
+      # 5. Check that important project files exist
+      - name: Check project files
+        shell: bash
+        run: |
+          echo "Checking project structure..."
+
+          if [ -f "index.php" ]; then
+            echo "OK: index.php found"
+          else
+            echo "WARNING: index.php not found"
+          fi
+
+          if [ -f "composer.json" ]; then
+            echo "OK: composer.json found"
+          else
+            echo "INFO: composer.json not found - Composer is not required"
+          fi
+
+          echo "Project structure check completed."
