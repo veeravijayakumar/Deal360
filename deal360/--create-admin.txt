@@ -1,0 +1,6 @@
+<?php
+require 'config.php';
+ $pdo->prepare("INSERT INTO users (name,email,mobile,password_hash,role,email_verified,mobile_verified)
+VALUES ('Admin','admin@deal360.shop','9999999999',?,'admin',1,1)")
+->execute([password_hash('Admin@123', PASSWORD_DEFAULT)]);
+echo "Admin created — login: admin@deal360.shop / Admin@123. DELETE THIS FILE NOW.";
